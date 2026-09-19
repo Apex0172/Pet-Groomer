@@ -1,0 +1,60 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Multi-Tenant SaaS rules:
+    // A groomer (admin) can only read/write documents where businessId matches their auth.uid.
+    
+    function isOwner(businessId) {
+      return request.auth != null && request.auth.uid == businessId;
+    }
+
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /businesses/{businessId} {
+      // Anyone can read public business details for branding/booking
+      allow read: if true;
+      // Only the owner can create/update their business profile
+      allow write: if isOwner(businessId);
+    }
+
+    match /services/{serviceId} {
+      // Anyone can read services for the booking page
+      allow read: if true;
+      // Only the business owner can write
+      allow write: if isOwner(request.resource.data.businessId) || (resource != null && isOwner(resource.data.businessId));
+    }
+
+    match /clients/{clientId} {
+      // Only the business owner can read, update, or delete client records
+      allow read, update, delete: if isOwner(resource.data.businessId);
+      // Public booking flow can create client with valid businessId and contact details
+      allow create: if request.resource.data.businessId is string 
+                   && request.resource.data.ownerName is string 
+                   && request.resource.data.phone is string;
+      
+      // Subcollection for pets
+      match /pets/{petId} {
+        allow read, update, delete: if isOwner(get(/databases/$(database)/documents/clients/$(clientId)).data.businessId);
+        // Public booking flow can create pet details
+        allow create: if request.resource.data.petName is string;
+      }
+    }
+
+    match /appointments/{appointmentId} {
+      // Only the owning business can read, update, or delete appointments (PII protected)
+      allow read, update, delete: if isOwner(resource.data.businessId);
+      
+      // Public booking flow can create an appointment with required fields and safe status
+      allow create: if request.resource.data.businessId is string
+                   && request.resource.data.clientId is string
+                   && request.resource.data.serviceId is string
+                   && request.resource.data.startTime is string
+                   && request.resource.data.endTime is string
+                   && request.resource.data.status in ['Pending', 'Confirmed'];
+    }
+  }
+}
