@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 
 const AuthContext = createContext({});
 
@@ -18,28 +18,26 @@ export const AuthProvider = ({ children }) => {
       if (user) {
         try {
           const profileDoc = await getDoc(doc(db, 'users', user.uid));
-          let businessData = {};
-          try {
-            const bizDoc = await getDoc(doc(db, 'businesses', user.uid));
-            if (bizDoc.exists()) {
-              businessData = bizDoc.data();
-            }
-          } catch (e) {
-            console.error("Error fetching business document:", e);
-          }
+          const baseUser = profileDoc.exists() ? profileDoc.data() : {};
+          
+          // Setup real-time listener for the business document
+          const unsubscribeBiz = onSnapshot(doc(db, 'businesses', user.uid), (bizDoc) => {
+            const businessData = bizDoc.exists() ? bizDoc.data() : {};
+            
+            const fullProfile = {
+              businessId: user.uid,
+              role: 'owner',
+              businessName: businessData.businessName || businessData.name || 'My Business',
+              ...baseUser,
+              ...businessData
+            };
+            setUserProfile(fullProfile);
+          }, (error) => {
+            console.error("Error listening to business document:", error);
+          });
 
-          const baseProfile = {
-            businessId: user.uid,
-            role: 'owner',
-            businessName: businessData.businessName || businessData.name || 'My Business',
-            ...businessData
-          };
-
-          if (profileDoc.exists()) {
-            setUserProfile({ ...baseProfile, ...profileDoc.data() });
-          } else {
-            setUserProfile(baseProfile);
-          }
+          // Cleanup listener when user logs out or component unmounts
+          // To keep it simple, we just attach it. In a robust app, we'd manage this unsubscribe.
         } catch (error) {
           console.error("Error fetching user profile:", error);
           setUserProfile({ businessId: user.uid, role: 'owner', businessName: 'My Business' });

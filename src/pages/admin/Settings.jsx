@@ -297,9 +297,9 @@ export default function Settings() {
           <div className="mt-6 p-4 bg-surface-container-lowest rounded-2xl border border-outline-variant">
             <label className="block text-xs font-medium text-on-surface-variant mb-3 uppercase tracking-wider">Preview</label>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary-container text-primary flex items-center justify-center overflow-hidden shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center overflow-hidden shrink-0">
                 {formData.brandLogoUrl ? (
-                  <img src={formData.brandLogoUrl} alt="Logo" className="w-full h-full object-cover" />
+                  <img src={formData.brandLogoUrl} alt="Logo" className="w-full h-full object-cover bg-white" />
                 ) : (
                   <div className="w-6 h-6">
                     {brandIcons.find(i => i.id === formData.brandIcon)?.svg}

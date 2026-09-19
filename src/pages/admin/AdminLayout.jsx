@@ -51,9 +51,9 @@ export default function AdminLayout() {
       <aside className="w-64 bg-surface-container flex flex-col border-r border-outline-variant">
         {/* Brand */}
         <div className="h-16 flex items-center gap-3 px-5 border-b border-outline-variant">
-          <div className="w-9 h-9 rounded-xl bg-primary-container text-primary flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+          <div className="w-9 h-9 rounded-xl bg-primary text-on-primary flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
             {brandLogoUrl ? (
-              <img src={brandLogoUrl} alt="Logo" className="w-full h-full object-cover" />
+              <img src={brandLogoUrl} alt="Logo" className="w-full h-full object-cover bg-white" />
             ) : (
               <div className="w-5 h-5">
                 {BRAND_ICONS[brandIcon] || BRAND_ICONS.paw}
