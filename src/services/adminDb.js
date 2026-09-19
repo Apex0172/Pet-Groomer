@@ -76,6 +76,53 @@ export const getClientsWithPets = async (businessId) => {
   return clients;
 };
 
+// Fetch Clients with their booking confirmation status
+export const getClientsWithBookingStatus = async (businessId) => {
+  // Fetch all clients
+  const clientsQuery = query(collection(db, 'clients'), where('businessId', '==', businessId));
+  const clientsSnapshot = await getDocs(clientsQuery);
+
+  // Fetch all appointments for this business in one query
+  const apptsQuery = query(collection(db, 'appointments'), where('businessId', '==', businessId));
+  const apptsSnapshot = await getDocs(apptsQuery);
+
+  // Group appointments by clientId
+  const appointmentsByClient = {};
+  for (const apptDoc of apptsSnapshot.docs) {
+    const appt = apptDoc.data();
+    if (appt.clientId) {
+      if (!appointmentsByClient[appt.clientId]) {
+        appointmentsByClient[appt.clientId] = [];
+      }
+      appointmentsByClient[appt.clientId].push({ id: apptDoc.id, ...appt });
+    }
+  }
+
+  const clients = [];
+  for (const clientDoc of clientsSnapshot.docs) {
+    const clientData = { id: clientDoc.id, ...clientDoc.data(), pets: [] };
+
+    // Fetch pets for this client
+    const petsQ = collection(db, `clients/${clientDoc.id}/pets`);
+    const petsSnapshot = await getDocs(petsQ);
+    clientData.pets = petsSnapshot.docs.map(p => ({ id: p.id, ...p.data() }));
+
+    // Determine booking status
+    const clientAppts = appointmentsByClient[clientDoc.id] || [];
+    const hasConfirmedBooking = clientAppts.some(
+      a => a.status === 'Confirmed' || a.status === 'Completed'
+    );
+    clientData.isConfirmedClient = hasConfirmedBooking;
+    clientData.totalAppointments = clientAppts.length;
+    clientData.lastAppointment = clientAppts.length > 0
+      ? clientAppts.sort((a, b) => new Date(b.startTime) - new Date(a.startTime))[0]
+      : null;
+
+    clients.push(clientData);
+  }
+  return clients;
+};
+
 // Upload Rabies Vaccine Record
 export const uploadVaccineRecord = async (businessId, clientId, petId, file) => {
   const storageRef = ref(storage, `vaccines/${businessId}/${clientId}/${petId}/${file.name}`);

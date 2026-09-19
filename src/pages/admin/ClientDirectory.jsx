@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getClientsWithPets } from '../../services/adminDb';
+import { getClientsWithBookingStatus } from '../../services/adminDb';
 
 export default function ClientDirectory() {
   const { userProfile } = useAuth();
@@ -9,6 +9,7 @@ export default function ClientDirectory() {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedClientId, setExpandedClientId] = useState(null);
+  const [activeTab, setActiveTab] = useState('confirmed');
 
   useEffect(() => {
     if (!userProfile?.businessId) return;
@@ -16,7 +17,7 @@ export default function ClientDirectory() {
     const fetchClients = async () => {
       try {
         setLoading(true);
-        const data = await getClientsWithPets(userProfile.businessId);
+        const data = await getClientsWithBookingStatus(userProfile.businessId);
         setClients(data || []);
       } catch (err) {
         console.error(err);
@@ -29,7 +30,12 @@ export default function ClientDirectory() {
     fetchClients();
   }, [userProfile?.businessId]);
 
-  const filteredClients = clients.filter(client => 
+  const confirmedClients = clients.filter(c => c.isConfirmedClient);
+  const leadClients = clients.filter(c => !c.isConfirmedClient);
+
+  const activeClients = activeTab === 'confirmed' ? confirmedClients : leadClients;
+
+  const filteredClients = activeClients.filter(client =>
     client.ownerName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -79,10 +85,82 @@ export default function ClientDirectory() {
         </div>
       </header>
 
-      {clients.length === 0 ? (
+      {/* --- Tab Buttons --- */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => { setActiveTab('confirmed'); setSearchQuery(''); }}
+          className={`
+            flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border
+            ${activeTab === 'confirmed'
+              ? 'bg-primary text-on-primary border-primary shadow-md shadow-primary/20'
+              : 'bg-surface-container text-on-surface-variant border-outline-variant hover:bg-surface-container-high hover:border-outline'
+            }
+          `}
+        >
+          <span className="material-symbols-outlined text-lg">verified</span>
+          Confirmed Clients
+          <span className={`
+            min-w-[24px] h-6 flex items-center justify-center rounded-full text-xs font-bold px-1.5
+            ${activeTab === 'confirmed'
+              ? 'bg-on-primary/20 text-on-primary'
+              : 'bg-outline-variant/40 text-on-surface-variant'
+            }
+          `}>
+            {confirmedClients.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => { setActiveTab('leads'); setSearchQuery(''); }}
+          className={`
+            flex items-center gap-2.5 px-5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border
+            ${activeTab === 'leads'
+              ? 'bg-tertiary text-on-tertiary border-tertiary shadow-md shadow-tertiary/20'
+              : 'bg-surface-container text-on-surface-variant border-outline-variant hover:bg-surface-container-high hover:border-outline'
+            }
+          `}
+        >
+          <span className="material-symbols-outlined text-lg">person_add</span>
+          Leads
+          <span className={`
+            min-w-[24px] h-6 flex items-center justify-center rounded-full text-xs font-bold px-1.5
+            ${activeTab === 'leads'
+              ? 'bg-on-tertiary/20 text-on-tertiary'
+              : 'bg-outline-variant/40 text-on-surface-variant'
+            }
+          `}>
+            {leadClients.length}
+          </span>
+        </button>
+      </div>
+
+      {/* --- Tab Description --- */}
+      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm border ${
+        activeTab === 'confirmed'
+          ? 'bg-primary-container/30 border-primary/20 text-on-surface'
+          : 'bg-tertiary-container/30 border-tertiary/20 text-on-surface'
+      }`}>
+        <span className={`material-symbols-outlined text-lg ${activeTab === 'confirmed' ? 'text-primary' : 'text-tertiary'}`}>
+          {activeTab === 'confirmed' ? 'info' : 'lightbulb'}
+        </span>
+        {activeTab === 'confirmed'
+          ? 'Clients with at least one confirmed or completed booking.'
+          : 'Contacts from pending bookings — great for follow-ups and future outreach.'
+        }
+      </div>
+
+      {/* --- Client Cards --- */}
+      {activeClients.length === 0 ? (
         <div className="bg-surface-container rounded-2xl p-12 flex flex-col items-center justify-center text-center gap-4 border border-outline-variant text-on-surface-variant flex-1">
-          <span className="material-symbols-outlined text-6xl">pets</span>
-          <p className="text-lg">No clients yet. Clients will appear here when bookings are made.</p>
+          <span className="material-symbols-outlined text-6xl">
+            {activeTab === 'confirmed' ? 'how_to_reg' : 'person_search'}
+          </span>
+          <p className="text-lg">
+            {activeTab === 'confirmed'
+              ? 'No confirmed clients yet. Approve a booking to see clients here.'
+              : 'No leads yet. Pending bookings will create leads here.'
+            }
+          </p>
         </div>
       ) : filteredClients.length === 0 ? (
         <div className="bg-surface-container rounded-2xl p-12 flex flex-col items-center justify-center text-center gap-4 border border-outline-variant text-on-surface-variant flex-1">
@@ -100,16 +178,35 @@ export default function ClientDirectory() {
                 <div className="p-5 flex flex-col gap-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center font-bold text-lg shrink-0">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 ${
+                        client.isConfirmedClient
+                          ? 'bg-primary-container text-on-primary-container'
+                          : 'bg-tertiary-container text-on-tertiary-container'
+                      }`}>
                         {client.ownerName?.charAt(0).toUpperCase() || <span className="material-symbols-outlined">person</span>}
                       </div>
                       <div className="flex flex-col">
                         <h3 className="font-semibold text-lg line-clamp-1">{client.ownerName}</h3>
-                        <span className="text-sm text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-md inline-block w-fit mt-1">
-                          {client.pets?.length || 0} Pet{(client.pets?.length !== 1) ? 's' : ''}
-                        </span>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className="text-sm text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-md inline-block w-fit">
+                            {client.pets?.length || 0} Pet{(client.pets?.length !== 1) ? 's' : ''}
+                          </span>
+                          {client.totalAppointments > 0 && (
+                            <span className="text-xs text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                              <span className="material-symbols-outlined text-xs">calendar_month</span>
+                              {client.totalAppointments} booking{client.totalAppointments !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+
+                    {/* Status Chip */}
+                    {activeTab === 'leads' && client.lastAppointment && (
+                      <span className="text-xs bg-tertiary-container text-on-tertiary-container px-2.5 py-1 rounded-full font-medium whitespace-nowrap mt-1">
+                        {client.lastAppointment.status}
+                      </span>
+                    )}
                   </div>
                   
                   <div className="flex flex-col gap-2 text-sm text-on-surface-variant bg-surface-container-lowest p-3 rounded-xl border border-outline-variant/50">
@@ -122,6 +219,20 @@ export default function ClientDirectory() {
                       {client.email || 'No email'}
                     </div>
                   </div>
+
+                  {/* Last Visit / Last Request */}
+                  {client.lastAppointment && (
+                    <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+                      <span className="material-symbols-outlined text-sm">schedule</span>
+                      {activeTab === 'confirmed' ? 'Last booking:' : 'Requested:'}
+                      {' '}
+                      {new Date(client.lastAppointment.startTime).toLocaleDateString([], {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {hasPets && (
