@@ -404,20 +404,23 @@ export default function Settings() {
                 </select>
               </div>
 
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="autoApproveAppointments"
-                  name="autoApproveAppointments"
-                  checked={formData.autoApproveAppointments}
-                  onChange={(e) => setFormData(prev => ({ ...prev, autoApproveAppointments: e.target.checked }))}
-                  className="w-5 h-5 rounded text-primary focus:ring-primary border-outline"
-                />
-                <label htmlFor="autoApproveAppointments" className="text-sm font-medium text-on-surface">
+              <label htmlFor="autoApproveAppointments" className="flex items-center cursor-pointer gap-4 group">
+                <div className="relative shrink-0">
+                  <input
+                    type="checkbox"
+                    id="autoApproveAppointments"
+                    name="autoApproveAppointments"
+                    checked={formData.autoApproveAppointments}
+                    onChange={(e) => setFormData(prev => ({ ...prev, autoApproveAppointments: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-surface-container-highest border border-outline-variant rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/30 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-on-surface-variant peer-checked:after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:border-primary"></div>
+                </div>
+                <div className="text-sm font-medium text-on-surface">
                   Auto-Approve Appointments
                   <p className="text-xs text-on-surface-variant font-normal">New bookings will bypass the pending queue.</p>
-                </label>
-              </div>
+                </div>
+              </label>
             </div>
 
             <div>
@@ -442,20 +445,23 @@ export default function Settings() {
                 Configure upfront deposits to prevent no-shows. You can use your own Stripe account for automatic processing, or provide manual payment instructions (Venmo, Square, etc).
               </p>
 
-              <div className="flex items-center gap-3 mb-6">
-                <input
-                  type="checkbox"
-                  id="requireUpfrontDeposit"
-                  name="requireUpfrontDeposit"
-                  checked={formData.requireUpfrontDeposit}
-                  onChange={(e) => setFormData(prev => ({ ...prev, requireUpfrontDeposit: e.target.checked }))}
-                  className="w-5 h-5 rounded text-primary focus:ring-primary border-outline"
-                />
-                <label htmlFor="requireUpfrontDeposit" className="text-sm font-medium text-on-surface cursor-pointer">
+              <label htmlFor="requireUpfrontDeposit" className="flex items-center cursor-pointer gap-4 mb-6 group">
+                <div className="relative shrink-0">
+                  <input
+                    type="checkbox"
+                    id="requireUpfrontDeposit"
+                    name="requireUpfrontDeposit"
+                    checked={formData.requireUpfrontDeposit}
+                    onChange={(e) => setFormData(prev => ({ ...prev, requireUpfrontDeposit: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-surface-container-highest border border-outline-variant rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/30 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-on-surface-variant peer-checked:after:bg-on-primary after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:border-primary"></div>
+                </div>
+                <div className="text-sm font-medium text-on-surface">
                   Require Upfront Deposit
                   <p className="text-xs text-on-surface-variant font-normal">Clients must pay or agree to pay a deposit to secure their booking.</p>
-                </label>
-              </div>
+                </div>
+              </label>
 
               {formData.requireUpfrontDeposit && (
                 <div className="bg-surface-container p-5 rounded-2xl border border-outline-variant space-y-5">
