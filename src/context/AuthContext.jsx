@@ -16,10 +16,15 @@ export const AuthProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
+        let baseUser = {};
         try {
           const profileDoc = await getDoc(doc(db, 'users', user.uid));
-          const baseUser = profileDoc.exists() ? profileDoc.data() : {};
-          
+          baseUser = profileDoc.exists() ? profileDoc.data() : {};
+        } catch (error) {
+          console.warn("Could not fetch from 'users' collection, continuing with defaults:", error);
+        }
+
+        try {
           // Setup real-time listener for the business document
           const unsubscribeBiz = onSnapshot(doc(db, 'businesses', user.uid), (bizDoc) => {
             const businessData = bizDoc.exists() ? bizDoc.data() : {};
@@ -32,20 +37,24 @@ export const AuthProvider = ({ children }) => {
               ...businessData
             };
             setUserProfile(fullProfile);
+            setLoading(false); // Only stop loading once we have the initial data
           }, (error) => {
             console.error("Error listening to business document:", error);
+            setUserProfile({ businessId: user.uid, role: 'owner', businessName: 'My Business', ...baseUser });
+            setLoading(false);
           });
 
           // Cleanup listener when user logs out or component unmounts
           // To keep it simple, we just attach it. In a robust app, we'd manage this unsubscribe.
         } catch (error) {
-          console.error("Error fetching user profile:", error);
-          setUserProfile({ businessId: user.uid, role: 'owner', businessName: 'My Business' });
+          console.error("Error setting up business listener:", error);
+          setUserProfile({ businessId: user.uid, role: 'owner', businessName: 'My Business', ...baseUser });
+          setLoading(false);
         }
       } else {
         setUserProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
     return unsubscribe;
   }, []);
