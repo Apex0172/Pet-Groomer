@@ -107,16 +107,13 @@ export default function PetCrew({ focusedField, passwordVisible, status, classNa
       let py = ms.active ? ms.y : cy;
       
       const S = stateRef.current;
-      // We don't have exactly the same DOM IDs since they are dynamically generated or inside other components, 
-      // but we can simulate the target positions or try to select them generically.
       let target = null;
       if (m === 'submitting') {
         target = document.querySelector('button[type="submit"]');
       } else if ((m === 'typing' || m === 'shy') && S.focus) {
-        // If focus is just an abstract string 'email' / 'password', try to find an input with that name/type
-        target = document.querySelector(`input[type="${S.focus}"]`) || document.querySelector(`input[name="${S.focus}"]`);
-        // If it's a generic text field (like businessName), fallback to any focused input
-        if (!target) target = document.querySelector('input:focus');
+        target = document.getElementById(S.focus);
+      } else if (m === 'shy') {
+        target = document.getElementById('password');
       }
       
       if (target) { 

@@ -84,14 +84,20 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4 sm:p-8">
       <div className="w-full max-w-[1100px] min-h-[620px] bg-surface rounded-3xl overflow-hidden shadow-lg flex flex-col lg:grid lg:grid-cols-[58%_42%]">
         
-        {/* Left Panel: Pet Crew */}
-        <div className="bg-surface-container relative hidden min-[640px]:block lg:block h-44 lg:h-auto shrink-0 border-b lg:border-b-0 lg:border-r border-outline-variant">
+        {/* Left Panel: Pet Crew Stage */}
+        <div 
+          className="relative hidden min-[640px]:block lg:block h-44 lg:h-auto shrink-0 border-b lg:border-b-0 lg:border-r border-outline-variant flex items-center justify-center"
+          style={{
+            background: '#F4F4F7',
+            backgroundImage: 'linear-gradient(to right, rgba(15,23,42,.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,.04) 1px, transparent 1px)',
+            backgroundSize: '28px 28px'
+          }}
+        >
           <PetCrew 
             focusedField={focusedField} 
             passwordVisible={passwordVisible} 
             status={status} 
-            // On desktop: 65% width centered. On mobile: full width scaled down.
-            className="w-full lg:w-[65%] mx-auto scale-75 lg:scale-100 origin-bottom" 
+            className="w-[min(440px,80%)] mx-auto h-auto max-h-full overflow-visible" 
           />
         </div>
 
@@ -107,23 +113,25 @@ export default function Login() {
             {isSignUp && (
               <>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1 text-on-surface-variant">Business Name</label>
+                  <label htmlFor="businessName" className="block text-sm font-medium mb-1 text-on-surface-variant">Business Name</label>
                   <input 
+                    id="businessName"
                     type="text" 
                     required 
                     value={businessName} 
                     onChange={e => { setBusinessName(e.target.value); setStatus('idle'); }} 
-                    onFocus={() => setFocusedField('business')}
+                    onFocus={() => setFocusedField('businessName')}
                     onBlur={() => setFocusedField(null)}
                     className="w-full p-3 border border-outline-variant rounded-xl bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none" 
                   />
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1 text-on-surface-variant">Business Type</label>
+                  <label htmlFor="businessType" className="block text-sm font-medium mb-1 text-on-surface-variant">Business Type</label>
                   <select 
+                    id="businessType"
                     value={businessType} 
                     onChange={e => { setBusinessType(e.target.value); setStatus('idle'); }} 
-                    onFocus={() => setFocusedField('type')}
+                    onFocus={() => setFocusedField('businessType')}
                     onBlur={() => setFocusedField(null)}
                     className="w-full p-3 border border-outline-variant rounded-xl bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none"
                   >
@@ -136,8 +144,9 @@ export default function Login() {
             )}
             
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-1 text-on-surface-variant">Email</label>
+              <label htmlFor="email" className="block text-sm font-medium mb-1 text-on-surface-variant">Email</label>
               <input 
+                id="email"
                 type="email" 
                 required 
                 value={email} 
@@ -149,9 +158,10 @@ export default function Login() {
             </div>
             
             <div className="mb-6 relative">
-              <label className="block text-sm font-medium mb-1 text-on-surface-variant">Password</label>
+              <label htmlFor="password" className="block text-sm font-medium mb-1 text-on-surface-variant">Password</label>
               <div className="relative">
                 <input 
+                  id="password"
                   type={passwordVisible ? 'text' : 'password'} 
                   required 
                   value={password} 
