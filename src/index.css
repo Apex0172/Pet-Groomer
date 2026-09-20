@@ -35,6 +35,12 @@
   --color-error-container: #ffdad6;
   --color-on-error-container: #93000a;
 
+  /* ─── Pet Crew Colors ─── */
+  --color-poodle: #580FF2;
+  --color-cat: #EC6E33;
+  --color-bunny: #1B1C20;
+  --color-duck: #E1CB16;
+
   --color-background: #faf8ff;
   --color-on-background: #131b2e;
   --color-surface: #faf8ff;
