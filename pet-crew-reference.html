@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pet Crew Login — reference</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#fff;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#111019}
+  .card{width:min(1100px,calc(100vw - 32px));height:min(680px,calc(100vh - 32px));min-height:560px;display:grid;grid-template-columns:58% 42%;border:1px solid #E4E2ED;border-radius:24px;overflow:hidden;box-shadow:0 20px 48px -12px rgba(24,18,48,.09)}
+  .stage{position:relative;background:#F4F4F7;background-image:linear-gradient(to right,rgba(15,23,42,.04) 1px,transparent 1px),linear-gradient(to bottom,rgba(15,23,42,.04) 1px,transparent 1px);background-size:28px 28px;display:flex;align-items:center;justify-content:center}
+  #crewSvg{width:min(440px,80%);height:auto;overflow:visible}
+  .formside{display:flex;align-items:center;justify-content:center;padding:40px}
+  form{width:100%;max-width:320px}
+  h1{font-family:Epilogue,sans-serif;font-weight:600;font-size:32px;letter-spacing:-.02em;text-align:center;margin:0 0 28px}
+  label{display:block;font-size:13px;font-weight:600;margin:0 0 6px}
+  .row{display:flex;justify-content:space-between;align-items:baseline}
+  .row a,.foot a{color:#4A00CB;font-size:12px;font-weight:600;text-decoration:none}
+  .field{position:relative;margin-bottom:18px}
+  input{width:100%;padding:12px 14px;font:inherit;font-size:14px;border:1px solid #E4E2ED;border-radius:8px;background:#fff;outline:none;transition:border-color .15s,box-shadow .15s}
+  input:focus{border-color:#6318FF;box-shadow:0 0 0 3px rgba(99,24,255,.12)}
+  #togglePasswordBtn{position:absolute;right:8px;bottom:6px;border:0;background:none;padding:6px;cursor:pointer;color:#686677;display:flex}.material-symbols-outlined{font-family:'Material Symbols Outlined';font-weight:normal;font-style:normal;font-size:22px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr}
+  #submitBtn{width:100%;padding:13px;border:0;border-radius:8px;background:#6318FF;color:#fff;font:inherit;font-weight:600;font-size:15px;cursor:pointer;transition:background .15s,transform .15s,box-shadow .15s}
+  #submitBtn:hover{background:#520EDD;transform:translateY(-1px);box-shadow:0 8px 20px -6px rgba(99,24,255,.4)}
+  #submitBtn:active{transform:scale(.98)}
+  .foot{text-align:center;margin-top:18px}
+  a:focus-visible,button:focus-visible{outline:2px solid #9D6BFF;outline-offset:2px;border-radius:6px}
+  .alert{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:16px}.hidden{display:none!important}
+  #errorAlert{background:#FFF0F2;border:1px solid #FFCCD3;color:#D92644}
+  #successAlert{background:#ECFDF3;border:1px solid #B7EBC9;color:#166534}
+  .hint{position:fixed;left:12px;bottom:10px;font-size:11px;color:#9B98A8}
+  @media (max-width:900px){.card{grid-template-columns:1fr;grid-template-rows:38% 62%;height:auto;min-height:0}.stage{padding:16px 0}#crewSvg{width:min(280px,70%)}}
+  @media (max-height:640px) and (max-width:900px){.stage{display:none}}
+</style>
+</head>
+<body>
+<div class="card">
+  <section class="stage" id="characterStage">
+<svg id="crewSvg" viewBox="0 0 390 400" role="img" aria-label="Animated pet crew: poodle, cat, bunny and duck">
+  <line x1="8" y1="382" x2="382" y2="382" stroke="#D9D5E3" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- POODLE (back, tall). Body path is regenerated every frame so it can bend. -->
+  <g id="poodle">
+    <path id="poodleBody" fill="#6318FF" d="M70 380V140Q70 90 135 90Q200 90 200 140V380Z"/>
+    <g id="poodleHead">
+      <circle cx="70" cy="140" r="21" fill="#5211DE"/>
+      <circle cx="200" cy="140" r="21" fill="#5211DE"/>
+      <g id="poodleKnot" fill="#7C4BFF">
+        <circle cx="135" cy="76" r="30"/><circle cx="111" cy="88" r="18"/><circle cx="159" cy="88" r="18"/>
+      </g>
+      <g id="poodleFace">
+        <g id="poodleEyes">
+          <circle cx="115" cy="136" r="7" fill="#fff"/><circle cx="155" cy="136" r="7" fill="#fff"/>
+          <circle id="poodlePupilL" cx="115" cy="136" r="3.4" fill="#1A1633"/><circle id="poodlePupilR" cx="155" cy="136" r="3.4" fill="#1A1633"/>
+        </g>
+        <path id="poodleEyesShut" d="M108 138Q115 131 122 138M148 138Q155 131 162 138" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity="0"/>
+        <path id="poodleBrows" d="M107 126L124 120M163 126L146 120" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity="0"/>
+        <path d="M129 152h12q-1 7-6 7t-6-7z" fill="#1A1633" transform="translate(0 0)"/>
+        <path id="poodleMouth" d="M128 168h14" stroke="#1A1633" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+        <path id="poodleMouthSad" d="M127 173Q135 165 143 173" stroke="#1A1633" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0"/>
+        <path id="poodleMouthHappy" d="M126 165Q135 178 144 165" stroke="#1A1633" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- CAT (front-left dome). Ears are drawn BEFORE the dome so their bases are hidden inside it. -->
+  <g id="cat">
+    <g id="catEarL"><path d="M48 296L54 240L90 268Z" fill="#D3571E"/><path d="M56 286L59 254L80 270Z" fill="#FFB08A"/></g>
+    <g id="catEarR"><path d="M152 296L146 240L110 268Z" fill="#D3571E"/><path d="M144 286L141 254L120 270Z" fill="#FFB08A"/></g>
+    <path d="M15 380A85 118 0 0 1 185 380Z" fill="#EC6E33"/>
+    <ellipse cx="100" cy="352" rx="36" ry="28" fill="#F58A55"/>
+    <g id="catFace">
+      <g id="catEyes"><circle cx="78" cy="306" r="4.8" fill="#201C00"/><circle cx="122" cy="306" r="4.8" fill="#201C00"/><circle id="catPupilL" cx="79.5" cy="304.5" r="1.6" fill="#fff"/><circle id="catPupilR" cx="123.5" cy="304.5" r="1.6" fill="#fff"/></g>
+      <path id="catEyesShut" d="M71 307Q78 299 85 307M115 307Q122 299 129 307" fill="none" stroke="#201C00" stroke-width="2.4" stroke-linecap="round" opacity="0"/>
+      <path d="M96 317h8l-4 5z" fill="#A93E00"/>
+      <path id="catMouth" d="M91 325Q100 336 109 325Z" fill="#201C00"/>
+      <circle id="catMouthO" cx="100" cy="329" r="3.4" fill="#201C00" opacity="0"/>
+      <path id="catMouthSad" d="M91 333Q100 323 109 333" fill="none" stroke="#201C00" stroke-width="2.2" stroke-linecap="round" opacity="0"/>
+      <path id="catMouthHappy" d="M88 324Q100 342 112 324Z" fill="#201C00" opacity="0"/>
+      <g stroke="#FFB58A" stroke-width="1.5" stroke-linecap="round"><path d="M62 320L44 316M62 325L44 330M138 320L156 316M138 325L156 330"/></g>
+    </g>
+  </g>
+
+  <!-- BUNNY (middle). Ears are last in the group so they can fold down over the eyes. -->
+  <g id="bunny">
+    <path fill="#1E1E26" d="M200 380V240Q200 214 226 214H264Q290 214 290 240V380Z"/>
+    <g id="bunnyFace">
+      <g id="bunnyEyes"><circle cx="223" cy="250" r="7" fill="#fff"/><circle cx="267" cy="250" r="7" fill="#fff"/><circle id="bunnyPupilL" cx="223" cy="250" r="3.4" fill="#1A1633"/><circle id="bunnyPupilR" cx="267" cy="250" r="3.4" fill="#1A1633"/></g>
+      <path d="M240 262h10l-5 6z" fill="#F472B6"/>
+      <path d="M245 268v5M238 277Q245 272 245 273Q245 272 252 277" fill="none" stroke="#F472B6" stroke-width="1.6" stroke-linecap="round"/>
+      <g stroke="#8B8AA0" stroke-width="1.3" stroke-linecap="round" opacity=".7"><path d="M212 268L198 265M212 273L199 277M278 268L292 265M278 273L291 277"/></g>
+    </g>
+    <g id="bunnyEarL"><rect x="212" y="152" width="20" height="66" rx="10" fill="#1E1E26"/><rect x="217" y="160" width="10" height="50" rx="5" fill="#F472B6"/></g>
+    <g id="bunnyEarR"><rect x="258" y="152" width="20" height="66" rx="10" fill="#1E1E26"/><rect x="263" y="160" width="10" height="50" rx="5" fill="#F472B6"/></g>
+  </g>
+
+  <!-- DUCK (right). One pill = head+body, so nothing floats. -->
+  <g id="duck">
+    <path d="M280 380V277A45 45 0 0 1 370 277V380Z" fill="#E1CB16"/>
+    <path d="M296 332C301 358 321 364 336 352" fill="none" stroke="#BFA800" stroke-width="3" stroke-linecap="round"/>
+    <path d="M325 233C321 222 329 218 333 222" fill="none" stroke="#BFA800" stroke-width="3" stroke-linecap="round"/>
+    <g id="duckFace">
+      <g id="duckEyes"><circle cx="308" cy="266" r="4.6" fill="#121317"/><circle cx="342" cy="266" r="4.6" fill="#121317"/><circle id="duckPupilL" cx="309.5" cy="264.5" r="1.5" fill="#fff"/><circle id="duckPupilR" cx="343.5" cy="264.5" r="1.5" fill="#fff"/></g>
+      <path id="duckEyesShut" d="M302 267h12M336 267h12" stroke="#121317" stroke-width="2.6" stroke-linecap="round" opacity="0"/>
+      <path id="duckBill" d="M309 279Q325 271 341 279Q341 291 325 293Q309 291 309 279Z" fill="#F97316"/>
+      <path id="duckBillSad" d="M309 286Q317 279 325 286T341 286" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round" opacity="0"/>
+      <path id="duckSweat" d="M356 248q-6 9 0 12q6-3 0-12z" fill="#7DD3FC" opacity="0"/>
+    </g>
+  </g>
+
+  <g id="bubbles"></g>
+</svg>
+  </section>
+
+  <section class="formside">
+    <form id="loginForm" onsubmit="handleFormSubmit(event)" novalidate>
+      <h1>Admin Login</h1>
+      <div class="alert hidden" id="errorAlert">Email or password is incorrect. Check both and try again.</div>
+      <div class="alert hidden" id="successAlert">Logged in. Opening your dashboard…</div>
+      <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" placeholder="you@salon.com" onfocus="handleFieldFocus('email')" onblur="handleFieldBlur()" oninput="handleFieldTyping()"></div>
+      <div class="field"><div class="row"><label for="password">Password</label><a href="#forgot">Forgot password?</a></div>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" style="padding-right:56px" onfocus="handleFieldFocus('password')" onblur="handleFieldBlur()" oninput="handleFieldTyping()">
+        <button id="togglePasswordBtn" type="button" aria-label="Show password" aria-pressed="false" onclick="togglePasswordVisibility()"><span class="material-symbols-outlined" id="eyeIcon">visibility</span></button></div>
+      <button id="submitBtn" type="submit"><span id="btnText">Log In</span><span class="hidden" id="btnSpinner">…</span></button>
+      <div class="foot"><a href="#signup">New groomer? Create an account</a></div>
+    </form>
+  </section>
+</div>
+<div class="hint">Try it: type in the fields, show the password, then log in with a password under 8 characters (sad) or 8+ (happy).</div>
+
+<script>
+(() => {
+  const NOOP = { value: '', type: '', textContent: '', style: {}, classList: { add() {}, remove() {}, toggle() {} }, setAttribute() {}, appendChild() {}, getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }) };
+  const $ = id => document.getElementById(id) || NOOP;   // null-safe
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- tiny spring (semi-implicit Euler, sub-stepped for stability) ---------- */
+  class Spring {
+    constructor(v = 0, k = 170, c = 15) { this.v = v; this.t = v; this.vel = 0; this.k = k; this.c = c; }
+    step(dt) {
+      if (RM) { this.v = this.t; this.vel = 0; return; }
+      const n = Math.ceil(dt / 0.008), h = dt / n;
+      for (let i = 0; i < n; i++) { this.vel += (-this.k * (this.v - this.t) - this.c * this.vel) * h; this.v += this.vel * h; }
+    }
+  }
+  const sp = (v, k, c) => new Spring(v, k, c);
+
+  /* ---------- state ---------- */
+  const S = { focus: null, pwVisible: false, status: 'idle' };   // status: idle | submitting | error | success
+  const mouse = { x: 0, y: 0, active: false };
+  const mood = () => S.status === 'success' ? 'success' : S.status === 'error' ? 'error' : S.status === 'submitting' ? 'submitting' : S.pwVisible ? 'shy' : S.focus ? 'typing' : 'idle';
+
+  /* ---------- springs ---------- */
+  const A = {
+    lx: sp(0, 120, 17), ly: sp(0, 120, 17),
+    bend: sp(0, 150, 13), kink: sp(0, 160, 12), knot: sp(0, 200, 12),
+    shy: sp(0, 190, 20), sad: sp(0, 190, 20), happy: sp(0, 190, 20), cur: sp(0, 190, 20), wide: sp(0, 220, 22),
+    earBL: sp(0, 150, 11), earBR: sp(0, 150, 11), earCL: sp(0, 200, 13), earCR: sp(0, 200, 13),
+    leanP: sp(0, 140, 13), leanC: sp(0, 140, 13), leanB: sp(0, 140, 13), leanD: sp(0, 140, 13)
+  };
+  const INTRO = { p: sp(0, 85, 9), c: sp(0, 85, 9), b: sp(0, 55, 8), d: sp(0, 85, 9) };
+  const introStart = { p: 0.18, c: 0.10, b: 0.0, d: 0.26 };
+  const hop = [0, 0, 0, 0], hopAt = [-1, -1, -1, -1];
+  let shakeAt = -9, time = 0, last = performance.now(), blinkAt = [2.2, 3.1, 4, 5.2], blinkT = [0, 0, 0, 0];
+
+  const el = {}; ['poodle','poodleBody','poodleHead','poodleKnot','poodleFace','poodleEyes','poodleEyesShut','poodleBrows','poodleMouth','poodleMouthSad','poodleMouthHappy','poodlePupilL','poodlePupilR',
+    'cat','catEarL','catEarR','catFace','catEyes','catEyesShut','catMouth','catMouthO','catMouthSad','catMouthHappy','catPupilL','catPupilR',
+    'bunny','bunnyFace','bunnyEyes','bunnyEarL','bunnyEarR','bunnyPupilL','bunnyPupilR',
+    'duck','duckFace','duckEyes','duckEyesShut','duckBill','duckBillSad','duckSweat','duckPupilL','duckPupilR','bubbles','crewSvg'].forEach(i => el[i] = $(i));
+
+  /* ---------- helpers ---------- */
+  const f2 = n => (Math.round(n * 100) / 100);
+  const put = (g, px, o) => g.setAttribute('transform',
+    `translate(${f2(o.x||0)} ${f2(o.y||0)}) translate(${px} 380) rotate(${f2(o.rot||0)}) skewX(${f2(o.skew||0)}) scale(${f2(o.sx??1)} ${f2(o.sy??1)}) translate(${-px} -380)`);
+  const rot = (g, a, cx, cy) => g.setAttribute('transform', `rotate(${f2(a)} ${cx} ${cy})`);
+  const op = (g, v) => g.setAttribute('opacity', f2(clamp(v)));
+  const face = (g, x, y) => g.setAttribute('transform', `translate(${f2(x)} ${f2(y)})`);
+  const pup = (a, b, x, y) => { [a, b].forEach(p => p.setAttribute('transform', `translate(${f2(x)} ${f2(y)})`)); };
+  const blinkScale = (g, cy, s) => g.setAttribute('transform', `translate(0 ${cy}) scale(1 ${f2(s)}) translate(0 ${-cy})`);
+
+  /* poodle body: a bendable column. bend -1..1 curves like a banana, kink 0..1 makes a worried zig-zag */
+  const P = { cx: 135, base: 380, H: 290, W: 130, cap: 48, N: 30 };
+  function poodle(bend, kink) {
+    const f = s => bend * 70 * s * s - kink * 170 * s * s * (1 - s);
+    const df = s => 2 * bend * 70 * s - kink * 170 * (2 * s - 3 * s * s);
+    const capS = P.cap / P.H, Lp = [], Rp = [];
+    for (let i = 0; i <= P.N; i++) {
+      const s = 1 - Math.pow(1 - i / P.N, 1.7);
+      const u = s > 1 - capS ? (s - (1 - capS)) / capS : 0;
+      const w = (P.W / 2) * Math.sqrt(Math.max(0, 1 - u * u));
+      const x = P.cx + f(s), y = P.base - P.H * s, d = df(s), len = Math.hypot(d, P.H);
+      const nx = P.H / len, ny = d / len;
+      Lp.push([x - nx * w, y - ny * w]); Rp.push([x + nx * w, y + ny * w]);
+    }
+    const pts = Lp.concat(Rp.reverse()).map(p => `${f2(p[0])} ${f2(p[1])}`);
+    el.poodleBody.setAttribute('d', 'M' + pts.join('L') + 'Z');
+    const ang = Math.atan2(df(1), P.H) * 180 / Math.PI;
+    el.poodleHead.setAttribute('transform', `translate(${f2(f(1))} 0) rotate(${f2(ang)} ${P.cx} ${P.base - P.H})`);
+  }
+
+  /* where should everybody look? */
+  function look(m) {
+    const r = el.crewSvg.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height * 0.55;
+    let px = mouse.active ? mouse.x : cx + r.width * 0.5, py = mouse.active ? mouse.y : cy;
+    const target = m === 'submitting' ? $('submitBtn') : (m === 'typing' || m === 'shy') && S.focus ? $(S.focus) : m === 'shy' ? $('password') : null;
+    if (target) { const b = target.getBoundingClientRect(); px = b.left + b.width / 2; py = b.top + b.height / 2; }
+    return { x: clamp((px - cx) / (innerWidth * 0.4), -1, 1), y: clamp((py - cy) / (innerHeight * 0.4), -1, 1) };
+  }
+
+  /* ---------- main loop ---------- */
+  function frame(now) {
+    const dt = Math.min(0.033, (now - last) / 1000); last = now; time += dt;
+    const m = mood(), L = look(m);
+    const typ = m === 'typing', shy = m === 'shy', err = m === 'error', ok = m === 'success', sub = m === 'submitting';
+
+    A.lx.t = L.x; A.ly.t = L.y;
+    A.shy.t = shy ? 1 : 0; A.sad.t = err ? 1 : 0; A.happy.t = ok ? 1 : 0; A.cur.t = typ ? 1 : 0; A.wide.t = err || sub ? 1 : 0;
+
+    const lx = A.lx.v, ly = A.ly.v, away = 1 - 1.9 * A.shy.v;              // away<0 => looking away from the form
+    const lean = typ || sub ? 1.1 : 0.2;
+    A.bend.t = clamp(L.x * lean, -1, 1) * (err ? 0 : 1) - (err ? 0.1 : 0);
+    A.kink.t = err ? 0.85 : 0; A.knot.t = err ? 1 : 0;
+    A.leanP.t = -lx * (typ || sub ? 9 : 2.5); A.leanC.t = -lx * (typ || sub ? 5 : 2); A.leanB.t = -lx * (typ || sub ? 7 : 2.5); A.leanD.t = -lx * (typ || sub ? 9 : 3);
+    A.earBL.t = shy ? -178 : err ? -66 : typ ? 10 : -lx * 5; A.earBR.t = shy ? 178 : err ? 66 : typ ? 10 : -lx * 5;
+    A.earCL.t = err ? -26 : typ ? 8 : -lx * 6;            A.earCR.t = err ? 26 : typ ? 8 : -lx * 6;
+    Object.values(A).forEach(s => s.step(dt));
+    ['p','c','b','d'].forEach(k => { INTRO[k].t = time > introStart[k] ? 1 : 0; INTRO[k].step(dt); });
+    if (RM) Object.values(INTRO).forEach(s => s.v = 1);
+
+    // --- one-shot triggers
+    if (ok && hopAt[0] < 0) { for (let i = 0; i < 4; i++) hopAt[i] = time + i * 0.13; }
+    if (!ok) hopAt.fill(-1);
+    if (err && shakeAt < 0) shakeAt = time;
+    if (!err) shakeAt = -9;
+
+    const breathe = i => 1 + 0.012 * Math.sin(time * 1.7 + i * 1.3);
+    const wob = sub ? Math.sin(time * 24) * 1.4 : 0;
+    const shake = err ? Math.sin((time - shakeAt) * 55) * 7 * Math.exp(-(time - shakeAt) * 7) : 0;
+    const hopY = i => { const t = time - hopAt[i]; return hopAt[i] >= 0 && t >= 0 && t < 1.0 ? -Math.abs(Math.sin(t * Math.PI * 2)) * 24 * (1 - t) : 0; };
+
+    // --- intro shapes (loose piece -> final)
+    const ip = INTRO.p.v, ic = INTRO.c.v, ib = INTRO.b.v, id = INTRO.d.v;
+    const faceIn = k => clamp((INTRO[k].v - 0.55) * 2.4);
+
+    // POODLE
+    poodle(A.bend.v, A.kink.v);
+    put(el.poodle, P.cx, { x: shake, y: hopY(0), rot: (1 - ip) * -28, skew: A.leanP.v * 0.4 + wob, sx: 0.7 + 0.3 * ip, sy: (0.3 + 0.7 * ip) * breathe(0) });
+    el.poodleKnot.setAttribute('transform', `translate(0 ${f2(A.knot.v * 9)}) rotate(${f2(-A.knot.v * 14 - lx * 3)} ${P.cx} 100)`);
+    { const fx = lx * 11 * away, fy = ly * 6 + A.sad.v * 3; face(el.poodleFace, fx, fy); pup(el.poodlePupilL, el.poodlePupilR, lx * 2.6 * away, ly * 2.2);
+      const ps = Math.max(A.sad.v, A.shy.v * 0.7); op(el.poodleBrows, ps); op(el.poodleMouthSad, ps); op(el.poodleMouthHappy, A.happy.v); op(el.poodleMouth, 1 - Math.max(ps, A.happy.v)); op(el.poodleEyesShut, A.happy.v); op(el.poodleEyes, 1 - A.happy.v);
+      blinkScale(el.poodleEyes, 136, blink(0)); op(el.poodleFace, faceIn('p')); }
+
+    // CAT
+    put(el.cat, 100, { x: shake, y: hopY(1), rot: (1 - ic) * 30, skew: A.leanC.v * 0.5 + wob, sx: (0.35 + 0.65 * ic) * (1 + A.sad.v * 0.03), sy: (0.35 + 0.65 * ic) * breathe(1) * (1 - A.sad.v * 0.04) });
+    rot(el.catEarL, A.earCL.v, 70, 282); rot(el.catEarR, A.earCR.v, 130, 282);
+    { const shut = Math.max(A.shy.v, A.happy.v); face(el.catFace, lx * 8 * away, ly * 4 + A.sad.v * 3); pup(el.catPupilL, el.catPupilR, lx * 1.3, ly * 1.3);
+      op(el.catEyesShut, shut); op(el.catEyes, 1 - shut); blinkScale(el.catEyes, 306, blink(1));
+      const c = A.cur.v, sd = A.sad.v, hp = A.happy.v, base = 1 - clamp(c + sd + hp);
+      op(el.catMouth, base); op(el.catMouthO, c); op(el.catMouthSad, sd); op(el.catMouthHappy, hp); op(el.catFace, faceIn('c')); }
+
+    // BUNNY
+    put(el.bunny, 245, { x: shake, y: hopY(2) - (1 - ib) * 340, rot: (1 - ib) * -14, skew: A.leanB.v * 0.6 + wob, sy: breathe(2) });
+    rot(el.bunnyEarL, A.earBL.v, 222, 218); rot(el.bunnyEarR, A.earBR.v, 268, 218);
+    { face(el.bunnyFace, lx * 9 * away, ly * 4); pup(el.bunnyPupilL, el.bunnyPupilR, lx * 2.6 * away, ly * 2.2);
+      const w = 1 + A.wide.v * 0.22; el.bunnyEyes.setAttribute('transform', `translate(245 250) scale(${f2(w * 1)} ${f2(w * blink(2))}) translate(-245 -250)`); }
+
+    // DUCK
+    put(el.duck, 325, { x: shake, y: hopY(3), rot: (1 - id) * 12, skew: A.leanD.v * 0.5 + wob, sx: 0.8 + 0.2 * id, sy: (0.42 + 0.58 * id) * breathe(3) });
+    { face(el.duckFace, lx * 11 * away, ly * 4 + A.sad.v * 2); pup(el.duckPupilL, el.duckPupilR, lx * 1.4, ly * 1.4);
+      const sq = A.shy.v; op(el.duckEyesShut, sq); op(el.duckEyes, 1 - sq); blinkScale(el.duckEyes, 266, blink(3));
+      op(el.duckBill, 1 - A.sad.v); op(el.duckBillSad, A.sad.v); op(el.duckSweat, A.sad.v); op(el.duckFace, faceIn('d')); }
+
+    bubbles(dt, ok);
+    requestAnimationFrame(frame);
+  }
+
+  function blink(i) { if (RM) return 1; if (time > blinkAt[i]) { blinkT[i] = time; blinkAt[i] = time + 2.4 + Math.random() * 3.2; } const t = time - blinkT[i]; return t < 0.13 ? 1 - 0.9 * Math.sin(t / 0.13 * Math.PI) : 1; }
+
+  /* success bubbles */
+  const bub = []; let bubTimer = 0;
+  function bubbles(dt, on) {
+    bubTimer -= dt;
+    if (on && bubTimer <= 0 && !RM) { bubTimer = 0.09; const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); c.setAttribute('fill', 'rgba(157,107,255,.16)'); c.setAttribute('stroke', 'rgba(99,24,255,.45)'); c.setAttribute('stroke-width', '1.5'); el.bubbles.appendChild(c);
+      bub.push({ c, x: 30 + Math.random() * 330, y: 360, r: 5 + Math.random() * 9, v: 45 + Math.random() * 55, ph: Math.random() * 6, life: 0 }); }
+    for (let i = bub.length - 1; i >= 0; i--) { const b = bub[i]; b.life += dt; b.y -= b.v * dt; const a = clamp(Math.min(b.life * 3, (2.2 - b.life) * 1.2));
+      b.c.setAttribute('cx', f2(b.x + Math.sin(b.life * 4 + b.ph) * 6)); b.c.setAttribute('cy', f2(b.y)); b.c.setAttribute('r', f2(b.r)); b.c.setAttribute('opacity', f2(a));
+      if (b.life > 2.2) { b.c.remove(); bub.splice(i, 1); } }
+  }
+
+  addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; }, { passive: true });
+  requestAnimationFrame(t => { last = t; frame(t); });
+
+  /* ---------- public hooks used by the form (keep these names) ---------- */
+  const label = $('btnText').textContent || 'Log In';
+  const showEl = (id, on) => $(id).classList.toggle('hidden', !on);
+  window.PetCrew = { setStatus: s => { S.status = s; }, state: S };      // <- the only integration point for Firebase later
+  window.handleFieldFocus = name => { S.focus = name; };
+  window.handleFieldBlur = () => { S.focus = null; };
+  window.handleFieldTyping = () => { if (S.status === 'error' || S.status === 'success') S.status = 'idle'; showEl('errorAlert', false); };
+  window.togglePasswordVisibility = () => {
+    const i = $('password'); S.pwVisible = i.type === 'password'; i.type = S.pwVisible ? 'text' : 'password';
+    $('eyeIcon').textContent = S.pwVisible ? 'visibility_off' : 'visibility'; $('togglePasswordBtn').setAttribute('aria-pressed', S.pwVisible); $('togglePasswordBtn').setAttribute('aria-label', S.pwVisible ? 'Hide password' : 'Show password');
+  };
+  window.handleFormSubmit = e => {
+    e.preventDefault(); showEl('errorAlert', false); showEl('successAlert', false);
+    S.status = 'submitting'; $('btnText').textContent = 'Logging in…'; showEl('btnSpinner', true); $('submitBtn').disabled = true;
+    setTimeout(() => {                       // TODO: replace this demo rule with Firebase signInWithEmailAndPassword(...)
+      $('submitBtn').disabled = false; $('btnText').textContent = label; showEl('btnSpinner', false);
+      const good = /\S+@\S+\.\S+/.test($('email').value) && $('password').value.length >= 8;
+      S.status = good ? 'success' : 'error'; showEl(good ? 'successAlert' : 'errorAlert', true);
+      if (good) setTimeout(() => { if (S.status === 'success') S.status = 'idle'; }, 4200);
+    }, 1100);
+  };
+})();
+</script>
+</body>
+</html>

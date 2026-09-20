@@ -1,455 +1,327 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { Spring } from './useSpring';
-import { usePetMood } from './usePetMood';
-import { COLORS, SHAPES } from './petCrewConfig';
-
-// Generate the poodle body path based on bend and kink values
-function getPoodlePath(bend, kink) {
-  const dx = bend;
-  const kx = kink * 20;
-
-  if (kink > 0.01) {
-    return `M 100 380 L ${100 + dx * 0.3 - kx} 260 L ${100 + dx * 0.6 + kx} 150 L ${100 + dx} 40 L ${253 + dx} 40 L ${253 + dx * 0.6 + kx} 150 L ${253 + dx * 0.3 - kx} 260 L 253 380 Z`;
-  }
-  return `M 100 380 Q ${100 + dx * 0.5} 210 ${100 + dx} 40 L ${253 + dx} 40 Q ${253 + dx * 0.5} 210 253 380 Z`;
-}
-
-// Initial poodle path (no bend, no kink)
-const INITIAL_POODLE_PATH = getPoodlePath(0, 0);
+import React, { useEffect, useRef } from 'react';
 
 export default function PetCrew({ focusedField, passwordVisible, status, className = '' }) {
-  const { mood, lookAtHint } = usePetMood({ focusedField, passwordVisible, status });
+  const svgRef = useRef(null);
+  
+  // We use refs to safely pass React props into the vanilla JS animation loop closure
+  const stateRef = useRef({ focus: null, pwVisible: false, status: 'idle' });
+  const mouseRef = useRef({ x: 0, y: 0, active: false });
 
-  // Store mood in a ref so the rAF loop always sees the latest value
-  const moodRef = useRef(mood);
-  const lookAtRef = useRef(lookAtHint);
-  useEffect(() => { moodRef.current = mood; }, [mood]);
-  useEffect(() => { lookAtRef.current = lookAtHint; }, [lookAtHint]);
-
-  // Force re-render for expression changes (mood-driven JSX)
-  const [displayMood, setDisplayMood] = useState('idle');
-  useEffect(() => { setDisplayMood(mood); }, [mood]);
-
-  // DOM refs for direct SVG manipulation
-  const poodleBodyRef = useRef(null);
-  const poodleHeadRef = useRef(null);
-  const poodleTopknotRef = useRef(null);
-  const poodleFaceRef = useRef(null);
-  const catGroupRef = useRef(null);
-  const catFaceRef = useRef(null);
-  const catEarsRef = useRef(null);
-  const bunnyGroupRef = useRef(null);
-  const bunnyEarsRef = useRef(null);
-  const bunnyFaceRef = useRef(null);
-  const duckGroupRef = useRef(null);
-  const duckBeakRef = useRef(null);
-  const duckFaceRef = useRef(null);
-  const bubblesRef = useRef(null);
-
-  // Springs - created once
-  const springs = useRef(null);
-  if (springs.current === null) {
-    springs.current = {
-      lookX: new Spring(0, { stiffness: 300, damping: 20 }),
-      lookY: new Spring(0, { stiffness: 300, damping: 20 }),
-      poodleBend: new Spring(0, { stiffness: 120, damping: 14 }),
-      poodleKink: new Spring(0, { stiffness: 200, damping: 10 }),
-      poodleTopknotLag: new Spring(0, { stiffness: 80, damping: 10 }),
-      poodleHop: new Spring(0, { stiffness: 250, damping: 18 }),
-      catSquash: new Spring(1, { stiffness: 150, damping: 12 }),
-      catHop: new Spring(0, { stiffness: 250, damping: 18 }),
-      bunnyLean: new Spring(0, { stiffness: 140, damping: 14 }),
-      bunnyEarFold: new Spring(0, { stiffness: 120, damping: 14 }),
-      bunnyHop: new Spring(0, { stiffness: 250, damping: 18 }),
-      duckLean: new Spring(0, { stiffness: 130, damping: 14 }),
-      duckSquint: new Spring(0, { stiffness: 180, damping: 15 }),
-      duckHop: new Spring(0, { stiffness: 250, damping: 18 }),
-      introVal: new Spring(0, { stiffness: 60, damping: 10 }),
-    };
-  }
-
-  // Mutable state for the animation loop
-  const anim = useRef({
-    mouseX: 0,
-    mouseY: 0,
-    lastTime: 0,
-    rafId: 0,
-    running: false,
-    successTriggered: false,
-  });
-
-  // Track mouse globally
+  // Sync React props to the mutable state object read by the animation loop
   useEffect(() => {
-    const onMove = (e) => {
-      anim.current.mouseX = ((e.clientX / window.innerWidth) * 2 - 1) * 30;
-      anim.current.mouseY = ((e.clientY / window.innerHeight) * 2 - 1) * 20;
-    };
-    window.addEventListener('mousemove', onMove, { passive: true });
-    return () => window.removeEventListener('mousemove', onMove);
-  }, []);
+    stateRef.current.focus = focusedField;
+    stateRef.current.pwVisible = passwordVisible;
+    stateRef.current.status = status;
+  }, [focusedField, passwordVisible, status]);
 
-  // The core animation frame - uses refs only, no stale closures
-  const tick = useCallback((time) => {
-    const a = anim.current;
-    const s = springs.current;
-    const m = moodRef.current;
+  useEffect(() => {
+    if (!svgRef.current) return;
+    
+    // -------------------------------------------------------------------------
+    // Exact Vanilla JS Animation Loop ported from pet-crew-reference.html
+    // -------------------------------------------------------------------------
+    const container = svgRef.current.parentElement;
+    
+    // null-safe element selector scoped to our SVG
+    const NOOP = { value: '', type: '', textContent: '', style: {}, classList: { add() {}, remove() {}, toggle() {} }, setAttribute() {}, appendChild() {}, getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), remove() {} };
+    const $ = id => svgRef.current.querySelector(`#${id}`) || document.getElementById(id) || NOOP;
+    
+    const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+    const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const dt = Math.min((time - a.lastTime) / 1000, 0.064);
-    a.lastTime = time;
-
-    // --- Set spring targets based on current mood ---
-    // Reset defaults
-    s.poodleKink.setTarget(0);
-    s.catSquash.setTarget(1);
-    s.bunnyEarFold.setTarget(0);
-    s.duckSquint.setTarget(0);
-
-    if (m === 'idle') {
-      s.lookX.setTarget(a.mouseX);
-      s.lookY.setTarget(a.mouseY);
-      s.poodleBend.setTarget(a.mouseX * 0.2);
-      s.bunnyLean.setTarget(a.mouseX * 0.1);
-      s.duckLean.setTarget(a.mouseX * 0.13);
-    } else if (m === 'typing') {
-      const hint = lookAtRef.current;
-      s.lookX.setTarget(hint.x);
-      s.lookY.setTarget(hint.y);
-      s.poodleBend.setTarget(hint.x * 0.25);
-      s.bunnyLean.setTarget(4);
-      s.duckLean.setTarget(5);
-    } else if (m === 'shy') {
-      s.lookX.setTarget(-40);
-      s.lookY.setTarget(15);
-      s.poodleBend.setTarget(-15);
-      s.bunnyLean.setTarget(-3);
-      s.bunnyEarFold.setTarget(1);
-      s.duckLean.setTarget(-5);
-      s.duckSquint.setTarget(1);
-    } else if (m === 'error') {
-      s.lookX.setTarget(0);
-      s.lookY.setTarget(25);
-      s.poodleBend.setTarget(0);
-      s.poodleKink.setTarget(1);
-      s.catSquash.setTarget(0.82);
-      s.bunnyLean.setTarget(0);
-      s.duckLean.setTarget(0);
-    } else if (m === 'submitting') {
-      s.lookX.setTarget(15);
-      s.lookY.setTarget(20);
-      s.poodleBend.setTarget(5);
-      s.bunnyLean.setTarget(2);
-      s.duckLean.setTarget(3);
-    } else if (m === 'success') {
-      s.lookX.setTarget(0);
-      s.lookY.setTarget(-20);
-      s.poodleBend.setTarget(0);
-      s.bunnyLean.setTarget(0);
-      s.duckLean.setTarget(0);
-      if (!a.successTriggered) {
-        a.successTriggered = true;
-        s.catHop.velocity = -280;
-        setTimeout(() => { s.bunnyHop.velocity = -280; s.bunnyHop.settled = false; }, 80);
-        setTimeout(() => { s.poodleHop.velocity = -280; s.poodleHop.settled = false; }, 160);
-        setTimeout(() => { s.duckHop.velocity = -280; s.duckHop.settled = false; }, 240);
+    /* ---------- tiny spring ---------- */
+    class Spring {
+      constructor(v = 0, k = 170, c = 15) { this.v = v; this.t = v; this.vel = 0; this.k = k; this.c = c; }
+      step(dt) {
+        if (RM) { this.v = this.t; this.vel = 0; return; }
+        const n = Math.ceil(dt / 0.008), h = dt / n;
+        for (let i = 0; i < n; i++) { 
+          this.vel += (-this.k * (this.v - this.t) - this.c * this.vel) * h; 
+          this.v += this.vel * h; 
+        }
       }
     }
-    if (m !== 'success') a.successTriggered = false;
+    const sp = (v, k, c) => new Spring(v, k, c);
 
-    // --- Step all springs ---
-    const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    let allSettled = true;
+    /* ---------- state ---------- */
+    // Bridge to React
+    const getMood = () => {
+      const S = stateRef.current;
+      return S.status === 'success' ? 'success' : S.status === 'error' ? 'error' : S.status === 'submitting' ? 'submitting' : S.pwVisible ? 'shy' : S.focus ? 'typing' : 'idle';
+    };
 
-    if (prefersReduced) {
-      Object.values(s).forEach(sp => { sp.value = sp.target; sp.velocity = 0; sp.settled = true; });
-    } else {
-      Object.values(s).forEach(sp => {
-        if (!sp.update(dt)) allSettled = false;
-      });
-    }
-    // Secondary spring
-    s.poodleTopknotLag.setTarget(s.poodleBend.value);
-    if (!prefersReduced && !s.poodleTopknotLag.update(dt)) allSettled = false;
+    /* ---------- springs ---------- */
+    const A = {
+      lx: sp(0, 120, 17), ly: sp(0, 120, 17),
+      bend: sp(0, 150, 13), kink: sp(0, 160, 12), knot: sp(0, 200, 12),
+      shy: sp(0, 190, 20), sad: sp(0, 190, 20), happy: sp(0, 190, 20), cur: sp(0, 190, 20), wide: sp(0, 220, 22),
+      earBL: sp(0, 150, 11), earBR: sp(0, 150, 11), earCL: sp(0, 200, 13), earCR: sp(0, 200, 13),
+      leanP: sp(0, 140, 13), leanC: sp(0, 140, 13), leanB: sp(0, 140, 13), leanD: sp(0, 140, 13)
+    };
+    const INTRO = { p: sp(0, 85, 9), c: sp(0, 85, 9), b: sp(0, 55, 8), d: sp(0, 85, 9) };
+    const introStart = { p: 0.18, c: 0.10, b: 0.0, d: 0.26 };
+    const hop = [0, 0, 0, 0], hopAt = [-1, -1, -1, -1];
+    let shakeAt = -9, time = 0, last = performance.now(), blinkAt = [2.2, 3.1, 4, 5.2], blinkT = [0, 0, 0, 0];
 
-    // --- Apply transforms to DOM ---
-    const intro = s.introVal.value;
-    const lx = s.lookX.value;
-    const ly = s.lookY.value;
+    const el = {}; ['poodle','poodleBody','poodleHead','poodleKnot','poodleFace','poodleEyes','poodleEyesShut','poodleBrows','poodleMouth','poodleMouthSad','poodleMouthHappy','poodlePupilL','poodlePupilR',
+      'cat','catEarL','catEarR','catFace','catEyes','catEyesShut','catMouth','catMouthO','catMouthSad','catMouthHappy','catPupilL','catPupilR',
+      'bunny','bunnyFace','bunnyEyes','bunnyEarL','bunnyEarR','bunnyPupilL','bunnyPupilR',
+      'duck','duckFace','duckEyes','duckEyesShut','duckBill','duckBillSad','duckSweat','duckPupilL','duckPupilR','bubbles','crewSvg'].forEach(i => el[i] = $(i));
 
-    // Poodle body path
-    if (poodleBodyRef.current) {
-      poodleBodyRef.current.setAttribute('d', getPoodlePath(s.poodleBend.value, s.poodleKink.value));
-    }
-    // Poodle head group (ears + topknot + face follow bend)
-    if (poodleHeadRef.current) {
-      const hx = s.poodleBend.value;
-      const hy = s.poodleHop.value;
-      poodleHeadRef.current.setAttribute('transform', `translate(${hx}, ${hy})`);
-    }
-    // Topknot lags behind the bend
-    if (poodleTopknotRef.current) {
-      const lag = s.poodleBend.value - s.poodleTopknotLag.value;
-      poodleTopknotRef.current.setAttribute('transform', `translate(${-lag * 1.5}, 0)`);
-    }
-    // Poodle face slides with lookAt
-    if (poodleFaceRef.current) {
-      const fx = lx * 0.08 + s.poodleBend.value;
-      const fy = ly * 0.06 + s.poodleHop.value;
-      poodleFaceRef.current.setAttribute('transform', `translate(${fx}, ${fy})`);
-    }
+    /* ---------- helpers ---------- */
+    const f2 = n => (Math.round(n * 100) / 100);
+    const put = (g, px, o) => g.setAttribute('transform',
+      `translate(${f2(o.x||0)} ${f2(o.y||0)}) translate(${px} 380) rotate(${f2(o.rot||0)}) skewX(${f2(o.skew||0)}) scale(${f2(o.sx??1)} ${f2(o.sy??1)}) translate(${-px} -380)`);
+    const rot = (g, a, cx, cy) => g.setAttribute('transform', `rotate(${f2(a)} ${cx} ${cy})`);
+    const op = (g, v) => g.setAttribute('opacity', f2(clamp(v)));
+    const face = (g, x, y) => g.setAttribute('transform', `translate(${f2(x)} ${f2(y)})`);
+    const pup = (a, b, x, y) => { [a, b].forEach(p => p.setAttribute('transform', `translate(${f2(x)} ${f2(y)})`)); };
+    const blinkScale = (g, cy, s) => g.setAttribute('transform', `translate(0 ${cy}) scale(1 ${f2(s)}) translate(0 ${-cy})`);
 
-    // Cat group
-    if (catGroupRef.current) {
-      const hop = s.catHop.value;
-      const sq = s.catSquash.value;
-      // Scale from the bottom (y=380)
-      catGroupRef.current.setAttribute('transform',
-        `translate(0, ${hop}) translate(127.5, 380) scale(1, ${sq}) translate(-127.5, -380)`
-      );
-    }
-    if (catFaceRef.current) {
-      catFaceRef.current.setAttribute('transform', `translate(${lx * 0.12}, ${ly * 0.1})`);
-    }
-    if (catEarsRef.current) {
-      catEarsRef.current.setAttribute('transform', `rotate(${lx * 0.25}, 127, 240)`);
+    /* poodle body */
+    const P = { cx: 135, base: 380, H: 290, W: 130, cap: 48, N: 30 };
+    function poodle(bend, kink) {
+      const f = s => bend * 70 * s * s - kink * 170 * s * s * (1 - s);
+      const df = s => 2 * bend * 70 * s - kink * 170 * (2 * s - 3 * s * s);
+      const capS = P.cap / P.H, Lp = [], Rp = [];
+      for (let i = 0; i <= P.N; i++) {
+        const s = 1 - Math.pow(1 - i / P.N, 1.7);
+        const u = s > 1 - capS ? (s - (1 - capS)) / capS : 0;
+        const w = (P.W / 2) * Math.sqrt(Math.max(0, 1 - u * u));
+        const x = P.cx + f(s), y = P.base - P.H * s, d = df(s), len = Math.hypot(d, P.H);
+        const nx = P.H / len, ny = d / len;
+        Lp.push([x - nx * w, y - ny * w]); Rp.push([x + nx * w, y + ny * w]);
+      }
+      const pts = Lp.concat(Rp.reverse()).map(p => `${f2(p[0])} ${f2(p[1])}`);
+      el.poodleBody.setAttribute('d', 'M' + pts.join('L') + 'Z');
+      const ang = Math.atan2(df(1), P.H) * 180 / Math.PI;
+      el.poodleHead.setAttribute('transform', `translate(${f2(f(1))} 0) rotate(${f2(ang)} ${P.cx} ${P.base - P.H})`);
     }
 
-    // Bunny group
-    if (bunnyGroupRef.current) {
-      const lean = s.bunnyLean.value;
-      const hop = s.bunnyHop.value;
-      bunnyGroupRef.current.setAttribute('transform', `translate(0, ${hop}) rotate(${lean}, 257, 380)`);
-    }
-    if (bunnyEarsRef.current) {
-      const fold = s.bunnyEarFold.value;
-      const earScaleY = 1 - fold * 0.85;
-      // Fold ears down from their base (y ≈ 140)
-      bunnyEarsRef.current.setAttribute('transform',
-        `translate(0, ${140 * (1 - earScaleY)}) scale(1, ${earScaleY})`
-      );
-    }
-    if (bunnyFaceRef.current) {
-      bunnyFaceRef.current.setAttribute('transform', `translate(${lx * 0.06}, ${ly * 0.05})`);
-    }
-
-    // Duck group
-    if (duckGroupRef.current) {
-      const lean = s.duckLean.value;
-      const hop = s.duckHop.value;
-      duckGroupRef.current.setAttribute('transform', `translate(0, ${hop}) rotate(${lean}, 335, 380)`);
-    }
-    if (duckBeakRef.current) {
-      duckBeakRef.current.setAttribute('transform', `translate(${lx * 0.12}, 0)`);
-    }
-    if (duckFaceRef.current) {
-      duckFaceRef.current.setAttribute('transform', `translate(${lx * 0.06}, ${s.duckSquint.value * 2})`);
-    }
-
-    // Bubbles
-    if (bubblesRef.current) {
-      bubblesRef.current.style.opacity = m === 'success' ? '1' : '0';
+    /* look target */
+    function look(m) {
+      const r = svgRef.current.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height * 0.55;
+      const ms = mouseRef.current;
+      let px = ms.active ? ms.x : cx + r.width * 0.5;
+      let py = ms.active ? ms.y : cy;
+      
+      const S = stateRef.current;
+      // We don't have exactly the same DOM IDs since they are dynamically generated or inside other components, 
+      // but we can simulate the target positions or try to select them generically.
+      let target = null;
+      if (m === 'submitting') {
+        target = document.querySelector('button[type="submit"]');
+      } else if ((m === 'typing' || m === 'shy') && S.focus) {
+        // If focus is just an abstract string 'email' / 'password', try to find an input with that name/type
+        target = document.querySelector(`input[type="${S.focus}"]`) || document.querySelector(`input[name="${S.focus}"]`);
+        // If it's a generic text field (like businessName), fallback to any focused input
+        if (!target) target = document.querySelector('input:focus');
+      }
+      
+      if (target) { 
+        const b = target.getBoundingClientRect(); 
+        px = b.left + b.width / 2; 
+        py = b.top + b.height / 2; 
+      }
+      
+      return { x: clamp((px - cx) / (window.innerWidth * 0.4), -1, 1), y: clamp((py - cy) / (window.innerHeight * 0.4), -1, 1) };
     }
 
-    // In idle mode we always want to track the mouse, so never fully settle
-    if (m === 'idle') allSettled = false;
+    /* ---------- main loop ---------- */
+    let animationFrameId;
+    function frame(now) {
+      const dt = Math.min(0.033, (now - last) / 1000); last = now; time += dt;
+      const m = getMood(), L = look(m);
+      const typ = m === 'typing', shy = m === 'shy', err = m === 'error', ok = m === 'success', sub = m === 'submitting';
 
-    if (allSettled && intro >= 0.99) {
-      a.running = false;
-      // Don't schedule next frame
-    } else {
-      a.rafId = requestAnimationFrame(tick);
+      A.lx.t = L.x; A.ly.t = L.y;
+      A.shy.t = shy ? 1 : 0; A.sad.t = err ? 1 : 0; A.happy.t = ok ? 1 : 0; A.cur.t = typ ? 1 : 0; A.wide.t = err || sub ? 1 : 0;
+
+      const lx = A.lx.v, ly = A.ly.v, away = 1 - 1.9 * A.shy.v;              
+      const lean = typ || sub ? 1.1 : 0.2;
+      A.bend.t = clamp(L.x * lean, -1, 1) * (err ? 0 : 1) - (err ? 0.1 : 0);
+      A.kink.t = err ? 0.85 : 0; A.knot.t = err ? 1 : 0;
+      A.leanP.t = -lx * (typ || sub ? 9 : 2.5); A.leanC.t = -lx * (typ || sub ? 5 : 2); A.leanB.t = -lx * (typ || sub ? 7 : 2.5); A.leanD.t = -lx * (typ || sub ? 9 : 3);
+      A.earBL.t = shy ? -178 : err ? -66 : typ ? 10 : -lx * 5; A.earBR.t = shy ? 178 : err ? 66 : typ ? 10 : -lx * 5;
+      A.earCL.t = err ? -26 : typ ? 8 : -lx * 6;            A.earCR.t = err ? 26 : typ ? 8 : -lx * 6;
+      Object.values(A).forEach(s => s.step(dt));
+      ['p','c','b','d'].forEach(k => { INTRO[k].t = time > introStart[k] ? 1 : 0; INTRO[k].step(dt); });
+      if (RM) Object.values(INTRO).forEach(s => s.v = 1);
+
+      // --- one-shot triggers
+      if (ok && hopAt[0] < 0) { for (let i = 0; i < 4; i++) hopAt[i] = time + i * 0.13; }
+      if (!ok) hopAt.fill(-1);
+      if (err && shakeAt < 0) shakeAt = time;
+      if (!err) shakeAt = -9;
+
+      const breathe = i => 1 + 0.012 * Math.sin(time * 1.7 + i * 1.3);
+      const wob = sub ? Math.sin(time * 24) * 1.4 : 0;
+      const shake = err ? Math.sin((time - shakeAt) * 55) * 7 * Math.exp(-(time - shakeAt) * 7) : 0;
+      const hopY = i => { const t = time - hopAt[i]; return hopAt[i] >= 0 && t >= 0 && t < 1.0 ? -Math.abs(Math.sin(t * Math.PI * 2)) * 24 * (1 - t) : 0; };
+
+      // --- intro shapes
+      const ip = INTRO.p.v, ic = INTRO.c.v, ib = INTRO.b.v, id = INTRO.d.v;
+      const faceIn = k => clamp((INTRO[k].v - 0.55) * 2.4);
+
+      // POODLE
+      poodle(A.bend.v, A.kink.v);
+      put(el.poodle, P.cx, { x: shake, y: hopY(0), rot: (1 - ip) * -28, skew: A.leanP.v * 0.4 + wob, sx: 0.7 + 0.3 * ip, sy: (0.3 + 0.7 * ip) * breathe(0) });
+      el.poodleKnot.setAttribute('transform', `translate(0 ${f2(A.knot.v * 9)}) rotate(${f2(-A.knot.v * 14 - lx * 3)} ${P.cx} 100)`);
+      { const fx = lx * 11 * away, fy = ly * 6 + A.sad.v * 3; face(el.poodleFace, fx, fy); pup(el.poodlePupilL, el.poodlePupilR, lx * 2.6 * away, ly * 2.2);
+        const ps = Math.max(A.sad.v, A.shy.v * 0.7); op(el.poodleBrows, ps); op(el.poodleMouthSad, ps); op(el.poodleMouthHappy, A.happy.v); op(el.poodleMouth, 1 - Math.max(ps, A.happy.v)); op(el.poodleEyesShut, A.happy.v); op(el.poodleEyes, 1 - A.happy.v);
+        blinkScale(el.poodleEyes, 136, blink(0)); op(el.poodleFace, faceIn('p')); }
+
+      // CAT
+      put(el.cat, 100, { x: shake, y: hopY(1), rot: (1 - ic) * 30, skew: A.leanC.v * 0.5 + wob, sx: (0.35 + 0.65 * ic) * (1 + A.sad.v * 0.03), sy: (0.35 + 0.65 * ic) * breathe(1) * (1 - A.sad.v * 0.04) });
+      rot(el.catEarL, A.earCL.v, 70, 282); rot(el.catEarR, A.earCR.v, 130, 282);
+      { const shut = Math.max(A.shy.v, A.happy.v); face(el.catFace, lx * 8 * away, ly * 4 + A.sad.v * 3); pup(el.catPupilL, el.catPupilR, lx * 1.3, ly * 1.3);
+        op(el.catEyesShut, shut); op(el.catEyes, 1 - shut); blinkScale(el.catEyes, 306, blink(1));
+        const c = A.cur.v, sd = A.sad.v, hp = A.happy.v, base = 1 - clamp(c + sd + hp);
+        op(el.catMouth, base); op(el.catMouthO, c); op(el.catMouthSad, sd); op(el.catMouthHappy, hp); op(el.catFace, faceIn('c')); }
+
+      // BUNNY
+      put(el.bunny, 245, { x: shake, y: hopY(2) - (1 - ib) * 340, rot: (1 - ib) * -14, skew: A.leanB.v * 0.6 + wob, sy: breathe(2) });
+      rot(el.bunnyEarL, A.earBL.v, 222, 218); rot(el.bunnyEarR, A.earBR.v, 268, 218);
+      { face(el.bunnyFace, lx * 9 * away, ly * 4); pup(el.bunnyPupilL, el.bunnyPupilR, lx * 2.6 * away, ly * 2.2);
+        const w = 1 + A.wide.v * 0.22; el.bunnyEyes.setAttribute('transform', `translate(245 250) scale(${f2(w * 1)} ${f2(w * blink(2))}) translate(-245 -250)`); }
+
+      // DUCK
+      put(el.duck, 325, { x: shake, y: hopY(3), rot: (1 - id) * 12, skew: A.leanD.v * 0.5 + wob, sx: 0.8 + 0.2 * id, sy: (0.42 + 0.58 * id) * breathe(3) });
+      { face(el.duckFace, lx * 11 * away, ly * 4 + A.sad.v * 2); pup(el.duckPupilL, el.duckPupilR, lx * 1.4, ly * 1.4);
+        const sq = A.shy.v; op(el.duckEyesShut, sq); op(el.duckEyes, 1 - sq); blinkScale(el.duckEyes, 266, blink(3));
+        op(el.duckBill, 1 - A.sad.v); op(el.duckBillSad, A.sad.v); op(el.duckSweat, A.sad.v); op(el.duckFace, faceIn('d')); }
+
+      bubbles(dt, ok);
+      animationFrameId = requestAnimationFrame(frame);
     }
+
+    function blink(i) { if (RM) return 1; if (time > blinkAt[i]) { blinkT[i] = time; blinkAt[i] = time + 2.4 + Math.random() * 3.2; } const t = time - blinkT[i]; return t < 0.13 ? 1 - 0.9 * Math.sin(t / 0.13 * Math.PI) : 1; }
+
+    /* success bubbles */
+    const bub = []; let bubTimer = 0;
+    function bubbles(dt, on) {
+      bubTimer -= dt;
+      if (on && bubTimer <= 0 && !RM) { 
+        bubTimer = 0.09; 
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); 
+        c.setAttribute('fill', 'rgba(157,107,255,.16)'); 
+        c.setAttribute('stroke', 'rgba(99,24,255,.45)'); 
+        c.setAttribute('stroke-width', '1.5'); 
+        el.bubbles.appendChild(c);
+        bub.push({ c, x: 30 + Math.random() * 330, y: 360, r: 5 + Math.random() * 9, v: 45 + Math.random() * 55, ph: Math.random() * 6, life: 0 }); 
+      }
+      for (let i = bub.length - 1; i >= 0; i--) { 
+        const b = bub[i]; b.life += dt; b.y -= b.v * dt; 
+        const a = clamp(Math.min(b.life * 3, (2.2 - b.life) * 1.2));
+        b.c.setAttribute('cx', f2(b.x + Math.sin(b.life * 4 + b.ph) * 6)); 
+        b.c.setAttribute('cy', f2(b.y)); 
+        b.c.setAttribute('r', f2(b.r)); 
+        b.c.setAttribute('opacity', f2(a));
+        if (b.life > 2.2) { b.c.remove(); bub.splice(i, 1); } 
+      }
+    }
+
+    // Connect mouse tracking
+    const handlePointerMove = e => { 
+      mouseRef.current.x = e.clientX; 
+      mouseRef.current.y = e.clientY; 
+      mouseRef.current.active = true; 
+    };
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    
+    // Start loop
+    animationFrameId = requestAnimationFrame(t => { last = t; frame(t); });
+
+    // Cleanup on unmount
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      cancelAnimationFrame(animationFrameId);
+      // Clean up DOM bubbles
+      while (el.bubbles.firstChild) el.bubbles.removeChild(el.bubbles.firstChild);
+    };
   }, []);
 
-  // Ensure the loop is always running
-  const ensureRunning = useCallback(() => {
-    if (!anim.current.running) {
-      anim.current.running = true;
-      anim.current.lastTime = performance.now();
-      anim.current.rafId = requestAnimationFrame(tick);
-    }
-  }, [tick]);
-
-  // Start intro + loop on mount
-  useEffect(() => {
-    springs.current.introVal.setTarget(1);
-    ensureRunning();
-    return () => cancelAnimationFrame(anim.current.rafId);
-  }, [ensureRunning]);
-
-  // Restart loop whenever mood changes
-  useEffect(() => {
-    ensureRunning();
-  }, [mood, lookAtHint, ensureRunning]);
-
   return (
-    <div className={`relative w-full h-full flex items-end justify-center overflow-hidden pointer-events-none select-none ${className}`}>
-      <svg viewBox="0 0 390 400" className="w-full h-auto max-h-full" aria-hidden="true">
-        {/* Ground Line */}
-        <line x1="20" y1="380" x2="370" y2="380" stroke="var(--color-outline-variant)" strokeWidth="3" strokeLinecap="round" />
+    <div className={`relative w-full h-full flex items-center justify-center overflow-hidden pointer-events-none select-none ${className}`}>
+      {/* 
+        This SVG exactly matches the reference HTML file.
+        It uses fixed IDs that the animation loop relies on. 
+        Hardcoded colors are used to guarantee identical appearance to reference.
+      */}
+      <svg id="crewSvg" ref={svgRef} viewBox="0 0 390 400" role="img" aria-label="Animated pet crew" className="w-full h-auto max-h-full overflow-visible">
+        <line x1="8" y1="382" x2="382" y2="382" stroke="#D9D5E3" strokeWidth="3" strokeLinecap="round"/>
 
-        {/* ===== POODLE (back, tall) ===== */}
-        <g>
-          {/* Body - procedural path */}
-          <path ref={poodleBodyRef} d={INITIAL_POODLE_PATH} fill={COLORS.poodle} rx="8" />
-          {/* Head group moves with bend + hop */}
-          <g ref={poodleHeadRef}>
-            {/* Topknot */}
-            <circle ref={poodleTopknotRef} cx="176" cy="30" r="28" fill={COLORS.poodle} />
-            {/* Ear puffs */}
-            <ellipse cx="118" cy="65" rx="18" ry="22" fill={COLORS.poodle} />
-            <ellipse cx="234" cy="65" rx="18" ry="22" fill={COLORS.poodle} />
-          </g>
-          {/* Face group slides independently */}
-          <g ref={poodleFaceRef}>
-            {/* Eyes */}
-            <circle cx="158" cy="58" r="5" fill="white" />
-            <circle cx="158" cy="58" r="2.5" fill="#111" />
-            <circle cx="194" cy="58" r="5" fill="white" />
-            <circle cx="194" cy="58" r="2.5" fill="#111" />
-            {/* Nose */}
-            <ellipse cx="176" cy="72" rx="4" ry="3" fill="#222" />
-            {/* Mouth */}
-            {displayMood === 'error' ? (
-              <path d="M 166 82 Q 176 76 186 82" stroke="#222" strokeWidth="2" fill="none" />
-            ) : displayMood === 'shy' ? (
-              <path d="M 170 80 L 182 80" stroke="#222" strokeWidth="2" fill="none" />
-            ) : (
-              <path d="M 166 78 Q 176 85 186 78" stroke="#222" strokeWidth="2" fill="none" />
-            )}
-          </g>
-        </g>
-
-        {/* ===== BUNNY (middle, shy) ===== */}
-        <g ref={bunnyGroupRef}>
-          {/* Ears */}
-          <g ref={bunnyEarsRef}>
-            <path d={SHAPES.bunny.earL} fill={COLORS.bunny} />
-            <path d={SHAPES.bunny.earInnerL} fill="#ffb6c1" />
-            <path d={SHAPES.bunny.earR} fill={COLORS.bunny} />
-            <path d={SHAPES.bunny.earInnerR} fill="#ffb6c1" />
-          </g>
-          {/* Body */}
-          <path d={SHAPES.bunny.body} fill={COLORS.bunny} />
-          {/* Face */}
-          <g ref={bunnyFaceRef}>
-            {displayMood === 'shy' ? (
-              <>
-                <path d="M 234 172 Q 242 166 250 172" stroke="white" strokeWidth="2.5" fill="none" />
-                <path d="M 264 172 Q 272 166 280 172" stroke="white" strokeWidth="2.5" fill="none" />
-              </>
-            ) : displayMood === 'error' ? (
-              <>
-                <circle cx="242" cy="170" r="8" fill="white" />
-                <circle cx="242" cy="170" r="3" fill="#111" />
-                <circle cx="272" cy="170" r="8" fill="white" />
-                <circle cx="272" cy="170" r="3" fill="#111" />
-              </>
-            ) : (
-              <>
-                <circle cx="242" cy="170" r="6" fill="white" />
-                <circle cx="242" cy="170" r="2.5" fill="#111" />
-                <circle cx="272" cy="170" r="6" fill="white" />
-                <circle cx="272" cy="170" r="2.5" fill="#111" />
-              </>
-            )}
-            <ellipse cx="257" cy="182" rx="3.5" ry="2.5" fill="#ffb6c1" />
-          </g>
-        </g>
-
-        {/* ===== DUCK (right, deadpan) ===== */}
-        <g ref={duckGroupRef}>
-          <path d={SHAPES.duck.body} fill={COLORS.duck} />
-          <path d={SHAPES.duck.wing} fill="#c4a812" opacity="0.6" />
-          {/* Eyes */}
-          <g ref={duckFaceRef}>
-            {displayMood === 'shy' ? (
-              <>
-                <path d="M 328 222 L 338 222" stroke="#333" strokeWidth="2.5" strokeLinecap="round" />
-                <path d="M 348 222 L 358 222" stroke="#333" strokeWidth="2.5" strokeLinecap="round" />
-              </>
-            ) : (
-              <>
-                <circle cx="333" cy="222" r="2.5" fill="#333" />
-                <circle cx="353" cy="222" r="2.5" fill="#333" />
-              </>
-            )}
-            {displayMood === 'error' && (
-              <path d="M 362 214 Q 366 218 362 222" stroke="#667" strokeWidth="1.5" fill="none" />
-            )}
-          </g>
-          {/* Beak */}
-          <g ref={duckBeakRef}>
-            {displayMood === 'error' ? (
-              <path d="M 322 237 Q 335 232 348 237 Q 358 240 368 237" stroke="#e65c00" strokeWidth="3" fill="none" />
-            ) : (
-              <path d={SHAPES.duck.beak} fill="#e65c00" />
-            )}
-          </g>
-        </g>
-
-        {/* ===== GINGER CAT (front-left, friendly) ===== */}
-        <g ref={catGroupRef}>
-          {/* Ears */}
-          <g ref={catEarsRef}>
-            <path d={SHAPES.cat.earL} fill={COLORS.cat} />
-            <path d={SHAPES.cat.earR} fill={COLORS.cat} />
-          </g>
-          {/* Body */}
-          <path d={SHAPES.cat.body} fill={COLORS.cat} />
-          {/* Face */}
-          <g ref={catFaceRef}>
-            {displayMood === 'shy' ? (
-              <>
-                <path d="M 105 312 Q 112 306 119 312" stroke="#fff" strokeWidth="2.5" fill="none" />
-                <path d="M 135 312 Q 142 306 149 312" stroke="#fff" strokeWidth="2.5" fill="none" />
-              </>
-            ) : (
-              <>
-                <circle cx="112" cy="310" r="3.5" fill="#222" />
-                <circle cx="142" cy="310" r="3.5" fill="#222" />
-              </>
-            )}
-            {/* Mouth */}
-            {displayMood === 'error' ? (
-              <path d="M 118 328 Q 127 322 136 328" stroke="#222" strokeWidth="2" fill="none" />
-            ) : displayMood === 'typing' ? (
-              <ellipse cx="127" cy="325" rx="3" ry="4" fill="#222" />
-            ) : displayMood === 'success' ? (
-              <path d="M 115 322 Q 127 332 139 322" stroke="#222" strokeWidth="2" fill="none" />
-            ) : (
-              <path d="M 118 322 Q 127 329 136 322" stroke="#222" strokeWidth="2" fill="none" />
-            )}
-            {/* Whiskers */}
-            <g opacity="0.5">
-              <line x1="95" y1="316" x2="70" y2="312" stroke="#fff" strokeWidth="1.5" />
-              <line x1="95" y1="322" x2="68" y2="322" stroke="#fff" strokeWidth="1.5" />
-              <line x1="95" y1="328" x2="70" y2="332" stroke="#fff" strokeWidth="1.5" />
-              <line x1="159" y1="316" x2="184" y2="312" stroke="#fff" strokeWidth="1.5" />
-              <line x1="159" y1="322" x2="186" y2="322" stroke="#fff" strokeWidth="1.5" />
-              <line x1="159" y1="328" x2="184" y2="332" stroke="#fff" strokeWidth="1.5" />
+        {/* POODLE */}
+        <g id="poodle">
+          <path id="poodleBody" fill="#6318FF" d="M70 380V140Q70 90 135 90Q200 90 200 140V380Z"/>
+          <g id="poodleHead">
+            <circle cx="70" cy="140" r="21" fill="#5211DE"/>
+            <circle cx="200" cy="140" r="21" fill="#5211DE"/>
+            <g id="poodleKnot" fill="#7C4BFF">
+              <circle cx="135" cy="76" r="30"/><circle cx="111" cy="88" r="18"/><circle cx="159" cy="88" r="18"/>
+            </g>
+            <g id="poodleFace">
+              <g id="poodleEyes">
+                <circle cx="115" cy="136" r="7" fill="#fff"/><circle cx="155" cy="136" r="7" fill="#fff"/>
+                <circle id="poodlePupilL" cx="115" cy="136" r="3.4" fill="#1A1633"/><circle id="poodlePupilR" cx="155" cy="136" r="3.4" fill="#1A1633"/>
+              </g>
+              <path id="poodleEyesShut" d="M108 138Q115 131 122 138M148 138Q155 131 162 138" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" opacity="0"/>
+              <path id="poodleBrows" d="M107 126L124 120M163 126L146 120" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" opacity="0"/>
+              <path d="M129 152h12q-1 7-6 7t-6-7z" fill="#1A1633" transform="translate(0 0)"/>
+              <path id="poodleMouth" d="M128 168h14" stroke="#1A1633" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
+              <path id="poodleMouthSad" d="M127 173Q135 165 143 173" stroke="#1A1633" strokeWidth="2.2" strokeLinecap="round" fill="none" opacity="0"/>
+              <path id="poodleMouthHappy" d="M126 165Q135 178 144 165" stroke="#1A1633" strokeWidth="2.2" strokeLinecap="round" fill="none" opacity="0"/>
             </g>
           </g>
         </g>
 
-        {/* Success Bubbles */}
-        <g ref={bubblesRef} style={{ transition: 'opacity 0.4s' }} opacity="0">
-          <circle cx="100" cy="200" r="12" fill="var(--color-primary)" opacity="0.25">
-            <animate attributeName="cy" from="200" to="50" dur="1.8s" repeatCount="indefinite" />
-            <animate attributeName="opacity" from="0.3" to="0" dur="1.8s" repeatCount="indefinite" />
-          </circle>
-          <circle cx="190" cy="160" r="8" fill="var(--color-secondary)" opacity="0.25">
-            <animate attributeName="cy" from="160" to="20" dur="2.2s" repeatCount="indefinite" />
-            <animate attributeName="opacity" from="0.3" to="0" dur="2.2s" repeatCount="indefinite" />
-          </circle>
-          <circle cx="310" cy="180" r="10" fill="var(--color-tertiary)" opacity="0.25">
-            <animate attributeName="cy" from="180" to="30" dur="2s" repeatCount="indefinite" />
-            <animate attributeName="opacity" from="0.3" to="0" dur="2s" repeatCount="indefinite" />
-          </circle>
-          <circle cx="250" cy="130" r="6" fill="var(--color-primary)" opacity="0.2">
-            <animate attributeName="cy" from="130" to="10" dur="1.6s" repeatCount="indefinite" />
-            <animate attributeName="opacity" from="0.25" to="0" dur="1.6s" repeatCount="indefinite" />
-          </circle>
+        {/* CAT */}
+        <g id="cat">
+          <g id="catEarL"><path d="M48 296L54 240L90 268Z" fill="#D3571E"/><path d="M56 286L59 254L80 270Z" fill="#FFB08A"/></g>
+          <g id="catEarR"><path d="M152 296L146 240L110 268Z" fill="#D3571E"/><path d="M144 286L141 254L120 270Z" fill="#FFB08A"/></g>
+          <path d="M15 380A85 118 0 0 1 185 380Z" fill="#EC6E33"/>
+          <ellipse cx="100" cy="352" rx="36" ry="28" fill="#F58A55"/>
+          <g id="catFace">
+            <g id="catEyes"><circle cx="78" cy="306" r="4.8" fill="#201C00"/><circle cx="122" cy="306" r="4.8" fill="#201C00"/><circle id="catPupilL" cx="79.5" cy="304.5" r="1.6" fill="#fff"/><circle id="catPupilR" cx="123.5" cy="304.5" r="1.6" fill="#fff"/></g>
+            <path id="catEyesShut" d="M71 307Q78 299 85 307M115 307Q122 299 129 307" fill="none" stroke="#201C00" strokeWidth="2.4" strokeLinecap="round" opacity="0"/>
+            <path d="M96 317h8l-4 5z" fill="#A93E00"/>
+            <path id="catMouth" d="M91 325Q100 336 109 325Z" fill="#201C00"/>
+            <circle id="catMouthO" cx="100" cy="329" r="3.4" fill="#201C00" opacity="0"/>
+            <path id="catMouthSad" d="M91 333Q100 323 109 333" fill="none" stroke="#201C00" strokeWidth="2.2" strokeLinecap="round" opacity="0"/>
+            <path id="catMouthHappy" d="M88 324Q100 342 112 324Z" fill="#201C00" opacity="0"/>
+            <g stroke="#FFB58A" strokeWidth="1.5" strokeLinecap="round"><path d="M62 320L44 316M62 325L44 330M138 320L156 316M138 325L156 330"/></g>
+          </g>
         </g>
+
+        {/* BUNNY */}
+        <g id="bunny">
+          <path fill="#1E1E26" d="M200 380V240Q200 214 226 214H264Q290 214 290 240V380Z"/>
+          <g id="bunnyFace">
+            <g id="bunnyEyes"><circle cx="223" cy="250" r="7" fill="#fff"/><circle cx="267" cy="250" r="7" fill="#fff"/><circle id="bunnyPupilL" cx="223" cy="250" r="3.4" fill="#1A1633"/><circle id="bunnyPupilR" cx="267" cy="250" r="3.4" fill="#1A1633"/></g>
+            <path d="M240 262h10l-5 6z" fill="#F472B6"/>
+            <path d="M245 268v5M238 277Q245 272 245 273Q245 272 252 277" fill="none" stroke="#F472B6" strokeWidth="1.6" strokeLinecap="round"/>
+            <g stroke="#8B8AA0" strokeWidth="1.3" strokeLinecap="round" opacity=".7"><path d="M212 268L198 265M212 273L199 277M278 268L292 265M278 273L291 277"/></g>
+          </g>
+          <g id="bunnyEarL"><rect x="212" y="152" width="20" height="66" rx="10" fill="#1E1E26"/><rect x="217" y="160" width="10" height="50" rx="5" fill="#F472B6"/></g>
+          <g id="bunnyEarR"><rect x="258" y="152" width="20" height="66" rx="10" fill="#1E1E26"/><rect x="263" y="160" width="10" height="50" rx="5" fill="#F472B6"/></g>
+        </g>
+
+        {/* DUCK */}
+        <g id="duck">
+          <path d="M280 380V277A45 45 0 0 1 370 277V380Z" fill="#E1CB16"/>
+          <path d="M296 332C301 358 321 364 336 352" fill="none" stroke="#BFA800" strokeWidth="3" strokeLinecap="round"/>
+          <path d="M325 233C321 222 329 218 333 222" fill="none" stroke="#BFA800" strokeWidth="3" strokeLinecap="round"/>
+          <g id="duckFace">
+            <g id="duckEyes"><circle cx="308" cy="266" r="4.6" fill="#121317"/><circle cx="342" cy="266" r="4.6" fill="#121317"/><circle id="duckPupilL" cx="309.5" cy="264.5" r="1.5" fill="#fff"/><circle id="duckPupilR" cx="343.5" cy="264.5" r="1.5" fill="#fff"/></g>
+            <path id="duckEyesShut" d="M302 267h12M336 267h12" stroke="#121317" strokeWidth="2.6" strokeLinecap="round" opacity="0"/>
+            <path id="duckBill" d="M309 279Q325 271 341 279Q341 291 325 293Q309 291 309 279Z" fill="#F97316"/>
+            <path id="duckBillSad" d="M309 286Q317 279 325 286T341 286" fill="none" stroke="#F97316" strokeWidth="4.5" strokeLinecap="round" opacity="0"/>
+            <path id="duckSweat" d="M356 248q-6 9 0 12q6-3 0-12z" fill="#7DD3FC" opacity="0"/>
+          </g>
+        </g>
+
+        <g id="bubbles"></g>
       </svg>
     </div>
   );
